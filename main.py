@@ -63,14 +63,14 @@ class LogAnalyzerGUI(tk.Tk):
         self.title("OpenCore Log Analyzer")
         self.geometry("800x600")
 
-
         self.btn_open = tk.Button(self, text="Select OpenCore Log File", command=self.open_file)
         self.btn_open.pack(pady=5)
-
 
         self.text_area = scrolledtext.ScrolledText(self, font=("Consolas", 10))
         self.text_area.pack(fill=tk.BOTH, expand=True)
 
+        for level, color in COLORS.items():
+            self.text_area.tag_config(level, foreground=color)
 
         self.status_var = tk.StringVar()
         self.status_bar = tk.Label(self, textvariable=self.status_var, relief=tk.SUNKEN, anchor="w")
@@ -86,43 +86,141 @@ class LogAnalyzerGUI(tk.Tk):
         )
         if not path:
             return
+
+        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()
+
+
+        def has_junk_lines(lines):
+            for line in lines:
+                raw = line.rstrip("\n\r")
+                if raw == "":
+                    return True
+                if all(ch == '\x00' or ch.isspace() for ch in raw):
+                    return True
+                if len(raw) > 100 and raw.count('\x00') / len(raw) > 0.9:
+                    return True
+            return False
+
+        if has_junk_lines(lines):
+            answer = messagebox.askyesno(
+                "Whitespace/NUL lines detected",
+                "The file contains lines made mostly of whitespace or NUL characters.\n"
+                "Would you like to clean the file before loading?"
+            )
+            if answer:
+                path = clean_whitespace_lines(path, inplace=False)
+
         self.filepath = path
-        self.status_var.set(f"Loaded file: {os.path.basename(path)}")
         self.lines = analyze_log_file(path)
+        self.status_var.set(f"Loaded file: {os.path.basename(path)}")
         self.display_lines()
 
         save_split_logs(self.lines, os.path.dirname(path))
         messagebox.showinfo("Done", "Log analysis complete and split files saved.")
 
+
+
+
     def display_lines(self):
         self.text_area.config(state=tk.NORMAL)
         self.text_area.delete(1.0, tk.END)
-        for line in self.lines:
+
+
+        i = len(self.lines) - 1
+        while i >= 0:
+            line = self.lines[i]
+
+            if line.strip() == "" or classify_line(line) == "other" and line.strip().count(" ") > 50:
+                i -= 1
+            else:
+                break
+        trimmed_lines = self.lines[:i + 1]
+
+        for line in trimmed_lines:
             lvl = classify_line(line)
-            color = COLORS.get(lvl, "black")
             self.text_area.insert(tk.END, line, lvl)
-            self.text_area.tag_config(lvl, foreground=color)
+
         self.text_area.config(state=tk.DISABLED)
 
-def cli_mode(filepath):
+def is_junk_line(line: str) -> bool:
+    raw = line.rstrip("\n\r")
+
+    if raw == "":
+        return True
+
+
+    if all(ch == '\x00' or ch.isspace() for ch in raw):
+        return True
+
+    nul_ratio = raw.count('\x00') / len(raw)
+    if nul_ratio > 0.9:
+        return True
+
+
+    visible = ''.join(ch for ch in raw if ch not in ('\x00', '\n', '\r') and not ch.isspace())
+    if len(visible) < 5 and len(raw) > 50:
+        return True
+
+    return False
+
+
+def clean_whitespace_lines(filepath, inplace=False):
+    with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+        lines = f.readlines()
+
+    cleaned = []
+    removed_count = 0
+
+    for line in lines:
+        if is_junk_line(line):
+            print("[Removed]:", repr(line[:100]))
+            removed_count += 1
+            continue
+        cleaned.append(line)
+
+    if removed_count == 0:
+        return filepath 
+
+    if inplace:
+        output_path = filepath
+    else:
+        base, ext = os.path.splitext(filepath)
+        output_path = base + "_cleaned" + ext
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.writelines(cleaned)
+
+    print(f"[Cleaned] Removed {removed_count} junk lines (NUL/space-only).")
+    return output_path
+
+def cli_mode(filepath, clean=False, inplace=False):
     if not os.path.isfile(filepath):
         print(f"Error: file not found: {filepath}")
         sys.exit(1)
+
+    if clean:
+        filepath = clean_whitespace_lines(filepath, inplace=inplace)
+
     lines = analyze_log_file(filepath)
-    output_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+    output_dir = os.path.dirname(os.path.abspath(filepath))
     save_split_logs(lines, output_dir)
     print(f"Analysis complete. Files saved in {output_dir}")
+
 
 def main():
     parser = argparse.ArgumentParser(description="OpenCore Log Analyzer")
     parser.add_argument("--file", help="Path to OpenCore log file for CLI analysis")
+    parser.add_argument("--clean", action="store_true", help="Clean whitespace-only lines before processing")
+    parser.add_argument("--inplace", action="store_true", help="Modify file in-place when cleaning")
     args = parser.parse_args()
 
     if args.file:
-        cli_mode(args.file)
+        cli_mode(args.file, clean=args.clean, inplace=args.inplace)
     else:
         app = LogAnalyzerGUI()
         app.mainloop()
+
 
 if __name__ == "__main__":
     main()
