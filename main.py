@@ -3,6 +3,15 @@ import os
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext
 import argparse
+import time
+
+try:
+    import colorama
+    from colorama import Fore, Style
+    colorama.init()
+except ImportError:
+    Fore = Style = lambda x: ""
+    print("Install 'colorama' for color support in CLI: pip install colorama")
 
 
 LOG_LEVELS = {
@@ -16,6 +25,9 @@ LOG_LEVELS = {
     "DEBUG": "debug",
     "SUCCESS": "success",
     "OK": "success",
+    "MAC": "platform-info",
+    "INVALID":  "error"
+    
 }
 
 
@@ -27,6 +39,52 @@ COLORS = {
     "success": "green",
     "other": "black",
 }
+
+def pseudo_gui_mode(filepath, clean=False, inplace=False, page_size=25):
+    if not os.path.isfile(filepath):
+        print(f"File not found: {filepath}")
+        return
+
+    if clean:
+        filepath = clean_whitespace_lines(filepath, inplace=inplace)
+
+    lines = analyze_log_file(filepath)
+
+    levels_color = {
+        "error": Fore.RED,
+        "warning": Fore.YELLOW,
+        "info": Fore.CYAN,
+        "debug": Fore.LIGHTBLACK_EX,
+        "success": Fore.GREEN,
+        "platform-info": Fore.MAGENTA,
+        "other": Fore.WHITE
+    }
+
+    def clear():
+        os.system("cls" if os.name == "nt" else "clear")
+
+    idx = 0
+    total = len(lines)
+    while idx < total:
+        clear()
+        print(f"{Fore.BLUE}{'='*40}")
+        print(f"PSEUDO-GUI MODE – Viewing: {os.path.basename(filepath)}")
+        print(f"{'='*40}{Style.RESET_ALL}\n")
+
+        end = min(idx + page_size, total)
+        for i in range(idx, end):
+            line = lines[i]
+            level = classify_line(line)
+            color = levels_color.get(level, Fore.WHITE)
+            print(f"{color}{line.strip()}{Style.RESET_ALL}")
+        idx += page_size
+
+        if idx < total:
+            input(f"\n{Fore.YELLOW}-- More ({idx}/{total}) -- Press Enter to continue...{Style.RESET_ALL}")
+        else:
+            print(f"\n{Fore.GREEN}End of log. {total} lines shown.{Style.RESET_ALL}")
+            break
+
 
 def classify_line(line):
     upper_line = line.upper()
@@ -106,6 +164,7 @@ class LogAnalyzerGUI(tk.Tk):
             answer = messagebox.askyesno(
                 "Whitespace/NUL lines detected",
                 "The file contains lines made mostly of whitespace or NUL characters.\n"
+                "It may affect user experience, such as High CPU Usage, etc."
                 "Would you like to clean the file before loading?"
             )
             if answer:
@@ -195,6 +254,15 @@ def clean_whitespace_lines(filepath, inplace=False):
     return output_path
 
 def cli_mode(filepath, clean=False, inplace=False):
+    print(
+        "========================\n"
+        "OpCoreLogDissasembly\n\n"
+        "Your arguments:\n\n"
+        f"FIle: {filepath}\n"
+        f"Clean NUL Lines: {clean}\n"
+        f"Inplace: {inplace}\n"
+        "======================="
+    )
     if not os.path.isfile(filepath):
         print(f"Error: file not found: {filepath}")
         sys.exit(1)
@@ -213,10 +281,14 @@ def main():
     parser.add_argument("--file", help="Path to OpenCore log file for CLI analysis")
     parser.add_argument("--clean", action="store_true", help="Clean whitespace-only lines before processing")
     parser.add_argument("--inplace", action="store_true", help="Modify file in-place when cleaning")
+    parser.add_argument("--pseudo", action="store_true", help="Display log in pseudo-GUI CLI mode")
     args = parser.parse_args()
 
     if args.file:
-        cli_mode(args.file, clean=args.clean, inplace=args.inplace)
+        if args.pseudo:
+            pseudo_gui_mode(args.file, clean=args.clean, inplace=args.inplace)
+        else:
+            cli_mode(args.file, clean=args.clean, inplace=args.inplace)
     else:
         app = LogAnalyzerGUI()
         app.mainloop()

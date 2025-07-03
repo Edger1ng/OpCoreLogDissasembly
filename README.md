@@ -1,6 +1,6 @@
 # OpenCore Log Analyzer
 
-OpenCore Log Analyzer is a Python application for analyzing OpenCore boot log files by classifying log lines according to their severity (error, warning, info, debug, success, etc.). It provides both a graphical user interface (GUI) and a command-line interface (CLI) for convenient log inspection, cleaning, and splitting logs into categorized files.
+OpenCore Log Analyzer is a Python application for analyzing OpenCore boot log files by classifying log lines according to their severity (error, warning, info, debug, success, etc.). It provides a graphical user interface (GUI), a command-line interface (CLI), and a pseudo-GUI CLI mode for convenient log inspection, cleaning, and splitting logs into categorized files.
 
 ## Features
 
@@ -19,6 +19,11 @@ OpenCore Log Analyzer is a Python application for analyzing OpenCore boot log fi
   - Split and save categorized log files in the script's directory (or current working directory).
   - Suitable for automation and integration into build or CI pipelines.
 
+- **Pseudo-GUI CLI mode:**
+  - Use `--pseudo` to view logs in a paginated, colorized, interactive CLI interface.
+  - Navigate through the log file page by page with color-coded severity highlighting.
+  - Supports all cleaning and splitting options available in CLI mode.
+
 - **Output "artifacts":**
   - The split log files (`error.txt`, `warning.txt`, `success.txt`, `other.txt`) summarize the log analysis and can be collected or archived for further inspection.
 
@@ -26,6 +31,7 @@ OpenCore Log Analyzer is a Python application for analyzing OpenCore boot log fi
 
 - Python 3.x
 - Standard Python libraries (`tkinter`, `argparse`, etc.)
+- (Optional) `colorama` for color support in CLI and pseudo-GUI modes
 
 ## Installation
 
@@ -75,6 +81,18 @@ python main.py --file path/to/opencore.log --clean
 - The script will analyze and split the log file.
 - Categorized log files will be saved in the script's directory (or current working directory).
 - A completion message will be printed to the console.
+
+### Pseudo-GUI CLI Mode
+
+Use the `--pseudo` flag with `--file` to view logs interactively in the terminal:
+
+```bash
+python main.py --file path/to/opencore.log --pseudo
+```
+
+- Log lines are displayed page by page with color-coded severity.
+- Press Enter to advance through the log.
+- Supports `--clean` and `--inplace` options for cleaning junk lines before viewing.
 
 ## Log Levels Classification
 
