@@ -1,145 +1,134 @@
-# OpenCore Log Analyzer
+# OpenCore Log Analyzer — Improved
 
-OpenCore Log Analyzer is a Python application for analyzing OpenCore boot log files by classifying log lines according to their severity (error, warning, info, debug, success, etc.). It provides a graphical user interface (GUI), a command-line interface (CLI), and a pseudo-GUI CLI mode for convenient log inspection, cleaning, and splitting logs into categorized files.
+**OpenCore Log Analyzer — Improved** is an enhanced Python tool for analyzing OpenCore boot logs. It classifies log lines by severity, cleans junk lines, splits logs into categories, and works in **GUI**, **CLI**, and **interactive pseudo-GUI** modes.
 
-## Features
+## 📌 Features
 
-- **GUI mode:**
-  - Select and load OpenCore log files.
-  - Detect and optionally clean lines made up of whitespace or NUL characters before analysis.
-  - Display log contents with color-coded highlighting based on log severity.
-  - Automatically split log lines into separate files by severity (`error`, `warning`, `success`, `other`).
-  - Save categorized log files in the same directory as the original log file.
-  - User-friendly status bar and notifications.
+### 🔹 GUI Mode
 
-- **CLI mode:**
-  - Analyze a log file from the command line.
-  - Optionally clean whitespace/NUL-only lines before processing (`--clean`).
-  - Optionally clean the file in-place (`--inplace`).
-  - Split and save categorized log files in the script's directory (or current working directory).
-  - Suitable for automation and integration into build or CI pipelines.
+* Open and view OpenCore logs.
+* Color-coded highlighting by severity (`error`, `warning`, `info`, `debug`, `success`, `platform-info`, `other`).
+* Filter visible levels via checkboxes.
+* Search logs (Find).
+* Clean empty/NUL lines before analysis.
+* Export categorized logs into separate files.
+* Progress bar for large file loading.
 
-- **Pseudo-GUI CLI mode:**
-  - Use `--pseudo` to view logs in a paginated, colorized, interactive CLI interface.
-  - Navigate through the log file page by page with color-coded severity highlighting.
-  - Supports all cleaning and splitting options available in CLI mode.
+### 🔹 CLI Mode
 
-- **Output "artifacts":**
-  - The split log files (`error.txt`, `warning.txt`, `success.txt`, `other.txt`) summarize the log analysis and can be collected or archived for further inspection.
+* Analyze logs without GUI:
 
-## Requirements
+  * `--clean` — remove empty/NUL lines.
+  * `--inplace` — clean the file in place.
+  * `--outdir` — set output directory for split files.
+  * `--tail` — follow appended lines (like `tail -f`).
+* Automatically split into category-based `.log` files.
 
-- Python 3.x
-- Standard Python libraries (`tkinter`, `argparse`, etc.)
-- (Optional) `colorama` for color support in CLI and pseudo-GUI modes
+### 🔹 Pseudo-GUI Mode
 
-## Installation
+* `--pseudo` — page-by-page log viewing in the terminal.
+* Color-coded severity display.
+* Filter output by levels (`--filter ERROR,INFO`).
+* Controls: Enter — continue, `q` — quit.
 
-Clone or download the repository. No special installation required.
+---
+
+## 📂 Log Level Classification
+
+| Pattern Match                      | Category      |
+| ---------------------------------- | ------------- |
+| `FATAL`, `ERROR`, `ERR`, `INVALID` | error         |
+| `WARN`, `WARNING`                  | warning       |
+| `INFO`                             | info          |
+| `DBG`, `DEBUG`                     | debug         |
+| `SUCCESS`, `OK`                    | success       |
+| `MAC`                              | platform-info |
+| —                                  | other         |
+
+---
+
+## 📦 Installation
+
+1. Install Python **3.8+**
+2. Clone the repository:
 
 ```bash
-git clone https://github.com/Edger1ng/OpCoreLogDissasembly.git
-cd OpCoreLogDissasembly
+git clone https://github.com/USERNAME/REPO.git
+cd REPO
 ```
+
+3. (Optional) Install `colorama` for colored CLI output:
+
+```bash
+pip install colorama
+```
+
+---
 
 Alternatively, you can obtain ready-to-use artifacts from the [GitHub Actions](https://github.com/Edger1ng/OpCoreLogDissasembly/actions) page, where the latest builds and outputs are available for download.
 
-## Usage
+## 🚀 Usage
 
-### GUI Mode
-
-Run the script without arguments:
+### 1. **GUI Mode**
 
 ```bash
 python main.py
 ```
 
-- Click the **Select OpenCore Log File** button.
-- If the file contains lines made up of whitespace or NUL characters, you will be prompted to clean them before loading.
-- The log will be displayed with colored highlighting by severity.
-- Categorized log files will be saved alongside the original log file.
-- A message box will confirm completion.
+* **Open Log** — choose a file.
+* Search text (Find), filter levels, clean file, and export categories.
 
-### CLI Mode
-
-Run the script with the `--file` argument to analyze a log file without GUI:
+### 2. **CLI Mode**
 
 ```bash
 python main.py --file path/to/opencore.log
 ```
 
-Optional arguments:
-- `--clean` — Clean whitespace/NUL-only lines before processing.
-- `--inplace` — Modify the file in-place when cleaning (used with `--clean`).
+Options:
+
+* `--clean` — remove empty/NUL lines.
+* `--inplace` — clean the file in place.
+* `--outdir ./logs` — set output directory.
+* `--tail` — follow file changes.
 
 Example:
 
 ```bash
-python main.py --file path/to/opencore.log --clean
+python main.py --file opencore.log --clean --outdir ./split
 ```
 
-- The script will analyze and split the log file.
-- Categorized log files will be saved in the script's directory (or current working directory).
-- A completion message will be printed to the console.
-
-### Pseudo-GUI CLI Mode
-
-Use the `--pseudo` flag with `--file` to view logs interactively in the terminal:
+### 3. **Pseudo-GUI Mode**
 
 ```bash
-python main.py --file path/to/opencore.log --pseudo
+python main.py --file opencore.log --pseudo --filter ERROR,WARNING
 ```
 
-- Log lines are displayed page by page with color-coded severity.
-- Press Enter to advance through the log.
-- Supports `--clean` and `--inplace` options for cleaning junk lines before viewing.
+---
 
-## Log Levels Classification
+## 🗂 Output Files
 
-| Abbreviation | Classification |
-|--------------|----------------|
-| FATAL        | error          |
-| ERROR        | error          |
-| ERR          | error          |
-| WARN         | warning        |
-| WARNING      | warning        |
-| INFO         | info           |
-| DBG          | debug          |
-| DEBUG        | debug          |
-| SUCCESS      | success        |
-| OK           | success        |
+After analysis, the following files are created:
 
-Lines not matching any of the above will be classified as `other`.
+* `<prefix>_error.log`
+* `<prefix>_warning.log`
+* `<prefix>_info.log`
+* `<prefix>_debug.log`
+* `<prefix>_success.log`
+* `<prefix>_platform-info.log`
+* `<prefix>_other.log`
 
-## Output Files
+---
 
-Upon analysis, the program generates the following text files (by severity):
+## 🧹 Junk Line Cleaning
 
-- `success.txt` — lines classified as success
-- `warning.txt` — lines classified as warning
-- `error.txt` — lines classified as error
-- `other.txt` — lines that don't match any classification
+Removes lines that are:
 
-These files serve as artifacts for post-processing, sharing, or archival.
+* completely empty;
+* containing more than 50% NUL characters;
+* long but with very few visible characters.
 
-## Example
+---
 
-After loading a log file named `opencore.log`, you will find:
+## 📜 License
 
-```
-opencore.log
-success.txt
-warning.txt
-error.txt
-other.txt
-```
-
-Each file contains only the lines relevant to its severity category.
-
-## Cleaning Junk Lines
-
-The application can detect and remove "junk" lines, such as those made up entirely of whitespace or NUL characters, or lines with very little visible content. This cleaning can be performed interactively in the GUI or via CLI options (`--clean`, `--inplace`).
-
-## License
-
-MIT License — feel free to use, modify, and distribute.
+MIT License — free to use and modify.
